@@ -122,12 +122,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	// Count number of args after options, must be 0 or fail
-	if (optind < argc) {
-		printf("Usage: ttrack COMMAND [-OPTIONS ARG]");
-		return 1;
-	}
-
 	// Make command lowercase, pass validated info to next step
 	for (int i = 0; command[i]; i++) command[i] = tolower(command[i]);
 	enter(flags, vals, command, name);
