@@ -1,18 +1,20 @@
-#include <dirent.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 
 enum Flag {AFLAG, DFLAG, NFLAG, SFLAG, TFLAG, NUMFLAG};
 enum Val {AVAL, DVAL, NVAL, SVAL, TVAL, NUMVAL};
 
 
-void getFile(char *, FILE **);
-int enter(int *, char *[64], char *, char *);
-int start(char *, char *[64]);
+void getfile(FILE **, char *, char *);
+void putfile(FILE *, char *[64]);
+int enter(int *, char [NUMVAL][64], char *, char *);
+int start(char *, char [NUMVAL][64]);
 int edit(char *[64]);
 int list();
 int status();
@@ -26,12 +28,12 @@ int main(int argc, char *argv[]) {
 	int index, c;
 	char command[64];
 	int flags[NUMFLAG];
-	char *vals[NUMVAL];
+	char vals[NUMVAL][64];
 	char name[64] = "Timer";
 
 	opterr = 0;
 	for (int i = 0; i < NUMFLAG; i++) flags[i] = 0;
-	for (int i = 0; i < NUMVAL; i++) vals[i] = NULL;
+	for (int i = 0; i < NUMVAL; i++) vals[i][0] = 0;
 
 	if (argc == 1) {
 		strncpy(command, "list", 5);
@@ -134,25 +136,34 @@ int main(int argc, char *argv[]) {
 }
 
 
-void getfile(char *name, FILE **fp) {
+void getfile(FILE **fp, char *name, char *m) {
 	DIR *dp;
 	struct dirent *ep;
-	dp = opendir("~/.config/ttrack");
+	char filename[99] = "/home/sean/.config/ttrack/";
+	dp = opendir(filename);
 	if (dp != NULL) {
-		//*fp = fopen(name, "a");
-		printf("Directory found.\n");
 		closedir(dp);
+		strncat(filename, name, 64);
+		*fp = fopen(filename, m);
 	}
 	else {
-		printf("Making directory...\n");
-		mkdir("~/.config/ttrack");
-		printf("Directory made.\n");
-		getfile(name, fp);
+		mkdir(filename, 0755);
+		getfile(fp, name, m);
 	}
 }
 
 
-int enter(int *n, char *v[64], char *command, char *name) {
+void putfile(FILE *f, char *data[64]) {
+	for (int i = 0; i <= NUMVAL; i++) {
+		printf("fputs(data[%d], f);", i);
+		fputs(data[i], f);
+		printf("fputc(';', f);");
+		fputc(';', f);
+	}
+}
+
+
+int enter(int *n, char v[NUMVAL][64], char *command, char *name) {
 	// Debug/verification print
 	for (int i = 0; i < NUMFLAG; i++) {
 		printf("arg %d = %d %s\n", i, n[i], v[i]);
@@ -204,9 +215,32 @@ int enter(int *n, char *v[64], char *command, char *name) {
 	return 0;
 }
 
-int start(char *n, char *v[64]) {return 0;}
+
+int list() {
+	FILE *test;
+	getfile(&test, "testfile.txt", "a");
+	fclose(test);
+	return 0;
+}
+
+
+int start(char *n, char v[NUMVAL][64]) {
+	FILE *test;
+	char d[NUMVAL + 1][64];
+
+	strncpy(d[0], n, 64);
+	for (int i = 0; i < NUMVAL; i++)
+		strncpy(d[i + 1], v[i], 64);
+
+
+	getfile(&test, "testwriting.txt", "a");
+	//putfile(test, d);
+	fclose(test);
+	return 0;
+}
+
+
 int edit(char *v[64]) {return 0;}
-int list() {return 0;}
 int status() {return 0;}
 int stop(char *v[64]) {return 0;}
 int report() {return 0;}
