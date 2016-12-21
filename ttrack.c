@@ -1,9 +1,12 @@
+#include <dirent.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
+void getFile(char *, FILE **);
 int enter(int, char *, int, char *, char *);
+
 
 int main(int argc, char *argv[]) {
 	int nflag = 0;
@@ -66,6 +69,24 @@ int main(int argc, char *argv[]) {
 	enter(nflag, nval, tflag, tval, argv[optind]);
 
 	return 0;
+}
+
+
+void getfile(char *name, FILE **fp) {
+	DIR *dp;
+	struct dirent *ep;
+	dp = opendir("~/.config/ttrack");
+	if (dp != NULL) {
+		//*fp = fopen(name, "a");
+		printf("Directory found.\n");
+		closedir(dp);
+	}
+	else {
+		printf("Making directory...\n");
+		mkdir("~/.config/ttrack");
+		printf("Directory made.\n");
+		getfile(name, fp);
+	}
 }
 
 
