@@ -15,10 +15,10 @@ void getfile(FILE **, char *, char *);
 void putfile(FILE *, char *[64]);
 int enter(int *, char [NUMVAL][64], char *, char *);
 int start(char *, char [NUMVAL][64]);
-int edit(char *[64]);
+int edit(char [NUMVAL][64]);
 int list();
 int status();
-int stop(char *[64]);
+int stop(char [NUMVAL][64]);
 int report();
 int delete(char *);
 int help();
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 	while ((c = getopt(argc, argv, "a:d:n:s:t:")) != -1) {
 		switch (c) {
 			case 'a':
-				vals[AVAL] = optarg;
+				strncpy(vals[AVAL], optarg, 64);
 				flags[AFLAG]++;
 				if (flags[AFLAG] > 1) {
 					printf("Only one argument -%c allowed.\n", c);
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 				}
 				break;
 			case 'd':
-				vals[DVAL] = optarg;
+				strncpy(vals[DVAL], optarg, 64);
 				flags[DFLAG]++;
 				if (flags[DFLAG] > 1) {
 					printf("Only one argument -%c allowed.\n", c);
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 				}
 				break;
 			case 'n':
-				vals[NVAL] = optarg;
+				strncpy(vals[NVAL], optarg, 64);
 				flags[NFLAG]++;
 				if (flags[NFLAG] > 1) {
 					printf("Only one argument -%c allowed.\n", c);
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 				}
 				break;
 			case 's':
-				vals[SVAL] = optarg;
+				strncpy(vals[SVAL], optarg, 64);
 				flags[SFLAG]++;
 				if (flags[SFLAG] > 1) {
 					printf("Only one argument -%c allowed.\n", c);
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
 				}
 				break;
 			case 't':
-				vals[TVAL] = optarg;
+				strncpy(vals[TVAL], optarg, 64);
 				flags[TFLAG]++;
 				if (flags[TFLAG] > 1) {
 					printf("Only one argument -%c allowed.\n", c);
@@ -240,9 +240,9 @@ int start(char *n, char v[NUMVAL][64]) {
 }
 
 
-int edit(char *v[64]) {return 0;}
+int edit(char v[NUMVAL][64]) {return 0;}
 int status() {return 0;}
-int stop(char *v[64]) {return 0;}
+int stop(char v[NUMVAL][64]) {return 0;}
 int report() {return 0;}
 int delete(char *n) {return 0;}
 int help() {return 0;}
