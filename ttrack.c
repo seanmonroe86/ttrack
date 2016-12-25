@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
 
@@ -10,18 +11,18 @@
 
 enum Flag {AFLAG, DFLAG, NFLAG, SFLAG, TFLAG, NUMFLAG};
 enum Val {AVAL, DVAL, NVAL, SVAL, TVAL, NUMVAL};
+enum Sav {NAME, TSTART, DSTART, NOTE, TAG, NUMSAV};
 
 struct Timer {
 	char command[STR_MAX];
 	int flags[NUMFLAG];
 	char vals[NUMVAL][STR_MAX];
 	char name[STR_MAX];
+	char sav[NUMSAV][STR_MAX];
 };
 
 
-//void makearray(struct Timer *, char *[NUMVAL + 1][STR_MAX]);
 void getfile(FILE **, char *, char *);
-void putfile(struct Timer *, FILE *);
 int enter(struct Timer *);
 int start(struct Timer *);
 int edit(struct Timer *);
@@ -142,14 +143,6 @@ int main(int argc, char *argv[]) {
 }
 
 
-/*void makearray(struct Timer *t, char *a[NUMVAL + 1][STR_MAX]) {
-	strncpy(*a[0], t->name, STR_MAX);
-	for (int i = 0; i < NUMVAL + 1; i++) {
-		strncpy(*a[i + 1], t->vals[i], STR_MAX);
-	}
-}
-*/
-
 void getfile(FILE **fp, char *f, char *m) {
 	DIR *dp;
 	struct dirent *ep;
@@ -164,16 +157,6 @@ void getfile(FILE **fp, char *f, char *m) {
 		mkdir(filename, 0755);
 		getfile(fp, f, m);
 	}
-}
-
-
-void putfile(struct Timer *t, FILE *f) {
-	fputs(t->name, f);
-	for (int i = 0; i <= NUMVAL; i++) {
-		fputs(t->vals[i], f);
-		fputc(';', f);
-	}
-	fputc('\n', f);
 }
 
 
@@ -237,10 +220,31 @@ int list() {
 
 
 int start(struct Timer *t) {
-	FILE *test;
-	getfile(&test, "testwriting.txt", "w");
-	putfile(t, test);
-	fclose(test);
+	FILE *out;
+	time_t current_time;
+	struct tm *curr;
+	time(&current_time);
+	curr = localtime(&current_time);
+
+	// Populate the sav array of timer struct
+	strncpy(t->sav[NAME], t->name, STR_MAX);
+	sprintf(t->sav[TSTART], "%d:%d:%d",
+			curr->tm_hour, curr->tm_min, curr->tm_sec);
+	sprintf(t->sav[DSTART], "%d:%d:%d",
+			curr->tm_mon, curr->tm_mday, curr->tm_year - 100);
+	strncpy(t->sav[NOTE], t->vals[NVAL], STR_MAX);
+	strncpy(t->sav[TAG], t->vals[TVAL], STR_MAX);
+
+	// Save data to file
+	getfile(&out, "testwriting.txt", "w");
+	for (int i = 0; i < NUMSAV; i++) {
+		fputs(t->sav[i], out);
+		fputc(';', out);
+	}
+	fputs(t->sav[NUMVAL - 1], out);
+	fputc('\n', out);
+	fclose(out);
+
 	return 0;
 }
 
