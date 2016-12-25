@@ -19,9 +19,9 @@ struct Timer {
 };
 
 
-void makearray(struct Timer *, char [NUMVAL + 1][STR_MAX]);
+//void makearray(struct Timer *, char *[NUMVAL + 1][STR_MAX]);
 void getfile(FILE **, char *, char *);
-void putfile(char [NUMVAL + 1][STR_MAX], FILE *);
+void putfile(struct Timer *, FILE *);
 int enter(struct Timer *);
 int start(struct Timer *);
 int edit(struct Timer *);
@@ -137,19 +137,18 @@ int main(int argc, char *argv[]) {
 	for (int i = 0; timer.command[i]; i++)
 		timer.command[i] = tolower(timer.command[i]);
 	enter(&timer);
-	printf("post enter\n");
 
 	return 0;
 }
 
 
-void makearray(struct Timer *t, char a[NUMVAL + 1][STR_MAX]) {
-	strncpy(a[0], t->name, STR_MAX);
+/*void makearray(struct Timer *t, char *a[NUMVAL + 1][STR_MAX]) {
+	strncpy(*a[0], t->name, STR_MAX);
 	for (int i = 0; i < NUMVAL + 1; i++) {
-		strncpy(a[i + 1], t->vals[i], STR_MAX);
+		strncpy(*a[i + 1], t->vals[i], STR_MAX);
 	}
 }
-
+*/
 
 void getfile(FILE **fp, char *f, char *m) {
 	DIR *dp;
@@ -168,24 +167,17 @@ void getfile(FILE **fp, char *f, char *m) {
 }
 
 
-void putfile(char data[NUMVAL + 1][STR_MAX], FILE *f) {
+void putfile(struct Timer *t, FILE *f) {
+	fputs(t->name, f);
 	for (int i = 0; i <= NUMVAL; i++) {
-		printf("fputs(data[%d], f);", i);
-		fputs(data[i], f);
-		printf("fputc(';', f);");
+		fputs(t->vals[i], f);
 		fputc(';', f);
 	}
+	fputc('\n', f);
 }
 
 
 int enter(struct Timer *t) {
-	// Debug/verification print
-	for (int i = 0; i < NUMFLAG; i++) {
-		printf("arg %d = %d %s\n", i, t->name[i], t->vals[i]);
-	}
-	printf("name = %s\n", t->name);
-	printf("command = %s\n", t->command);
-
 	// Find the command and call the correct action with params
 	if (strncmp(t->command, "start", 5) == 0) {
 		printf("start %s -a=%s -d=%s -n=%s -s=%s -t=%s\n",
@@ -234,25 +226,21 @@ int enter(struct Timer *t) {
 
 
 int list() {
+	char out[STR_MAX];
 	FILE *test;
-	getfile(&test, "testfile.txt", "a");
+	getfile(&test, "testwriting.txt", "r");
+	fgets(out, STR_MAX, test);
 	fclose(test);
+	printf("%s", out);
 	return 0;
 }
 
 
 int start(struct Timer *t) {
 	FILE *test;
-	char d[NUMVAL + 1][STR_MAX];
-	printf("Pre makearray\n");
-	makearray(t, d);
-	printf("Post makearray\n");
-
-	getfile(&test, "testwriting.txt", "a");
-	printf("Post getfile\n");
-	//putfile(test, d);
+	getfile(&test, "testwriting.txt", "w");
+	putfile(t, test);
 	fclose(test);
-	printf("post close\n");
 	return 0;
 }
 
