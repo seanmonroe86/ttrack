@@ -214,7 +214,10 @@ int list() {
 	getfile(&test, "testwriting.txt", "r");
 	fgets(out, STR_MAX, test);
 	fclose(test);
+
 	printf("%s", out);
+	
+
 	return 0;
 }
 
@@ -230,18 +233,18 @@ int start(struct Timer *t) {
 	strncpy(t->sav[NAME], t->name, STR_MAX);
 	sprintf(t->sav[TSTART], "%d:%d:%d",
 			curr->tm_hour, curr->tm_min, curr->tm_sec);
-	sprintf(t->sav[DSTART], "%d:%d:%d",
-			curr->tm_mon, curr->tm_mday, curr->tm_year - 100);
+	sprintf(t->sav[DSTART], "%d/%d/%d",
+			curr->tm_mon, curr->tm_mday, curr->tm_year);
 	strncpy(t->sav[NOTE], t->vals[NVAL], STR_MAX);
 	strncpy(t->sav[TAG], t->vals[TVAL], STR_MAX);
 
 	// Save data to file
 	getfile(&out, "testwriting.txt", "w");
-	for (int i = 0; i < NUMSAV; i++) {
+	for (int i = 0; i < NUMSAV - 1; i++) {
 		fputs(t->sav[i], out);
 		fputc(';', out);
 	}
-	fputs(t->sav[NUMVAL - 1], out);
+	fputs(t->sav[NUMSAV - 1], out);
 	fputc('\n', out);
 	fclose(out);
 
