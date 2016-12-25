@@ -6,111 +6,116 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
+#define STR_MAX 64
 
 enum Flag {AFLAG, DFLAG, NFLAG, SFLAG, TFLAG, NUMFLAG};
 enum Val {AVAL, DVAL, NVAL, SVAL, TVAL, NUMVAL};
 
+struct Timer {
+	char command[STR_MAX];
+	int flags[NUMFLAG];
+	char vals[NUMVAL][STR_MAX];
+	char name[STR_MAX];
+};
 
+
+void makearray(struct Timer *, char [NUMVAL + 1][STR_MAX]);
 void getfile(FILE **, char *, char *);
-void putfile(FILE *, char *[64]);
-int enter(int *, char [NUMVAL][64], char *, char *);
-int start(char *, char [NUMVAL][64]);
-int edit(char [NUMVAL][64]);
+void putfile(char [NUMVAL + 1][STR_MAX], FILE *);
+int enter(struct Timer *);
+int start(struct Timer *);
+int edit(struct Timer *);
 int list();
 int status();
-int stop(char [NUMVAL][64]);
+int stop(struct Timer *);
 int report();
-int delete(char *);
+int delete(struct Timer *);
 int help();
 
 
 int main(int argc, char *argv[]) {
-	int index, c;
-	char command[64];
-	int flags[NUMFLAG];
-	char vals[NUMVAL][64];
-	char name[64] = "Timer";
+	char c;
+	struct Timer timer;
+	strncpy(timer.name, "Timer", STR_MAX);
 
 	opterr = 0;
-	for (int i = 0; i < NUMFLAG; i++) flags[i] = 0;
-	for (int i = 0; i < NUMVAL; i++) vals[i][0] = 0;
+	for (int i = 0; i < NUMFLAG; i++) timer.flags[i] = 0;
+	for (int i = 0; i < NUMVAL; i++) timer.vals[i][0] = 0;
 
 	if (argc == 1) {
-		strncpy(command, "list", 5);
+		strncpy(timer.command, "list", 5);
 		optind = 1;
-		//enter(flags, vals, "list", name);
-		//return 0;
 	}
 	else if ((argc == 3) && (argv[2][0] != '-')) {
-		strncpy(command, argv[1], 64);
-		strncpy(name, argv[2], 64);
+		strncpy(timer.command, argv[1], STR_MAX);
+		strncpy(timer.name, argv[2], STR_MAX);
 		optind = 3;
 	}
 	else {
-		strncpy(command, argv[1], 64);
+		strncpy(timer.command, argv[1], STR_MAX);
 		optind = 2;
 	}
 
-	// Up to one of each option is permitted. They both require an argument.
+	// Up to one of each option is permitted. They both require an argument
 	// Failure at any point aborts with an error message.
 	while ((c = getopt(argc, argv, "a:d:n:s:t:")) != -1) {
 		switch (c) {
 			case 'a':
-				strncpy(vals[AVAL], optarg, 64);
-				flags[AFLAG]++;
-				if (flags[AFLAG] > 1) {
+				strncpy(timer.vals[AVAL], optarg, STR_MAX);
+				timer.flags[AFLAG]++;
+				if (timer.flags[AFLAG] > 1) {
 					printf("Only one argument -%c allowed.\n", c);
 					return 1;
 				}
-				if (vals[AVAL][0] == '-') {
+				if (timer.vals[AVAL][0] == '-') {
 					printf("Option -%c requires an argument.\n", c);
 					return 1;
 				}
 				break;
 			case 'd':
-				strncpy(vals[DVAL], optarg, 64);
-				flags[DFLAG]++;
-				if (flags[DFLAG] > 1) {
+				strncpy(timer.vals[DVAL], optarg, STR_MAX);
+				timer.flags[DFLAG]++;
+				if (timer.flags[DFLAG] > 1) {
 					printf("Only one argument -%c allowed.\n", c);
 					return 1;
 				}
-				if (vals[DVAL][0] == '-') {
+				if (timer.vals[DVAL][0] == '-') {
 					printf("Option -%c requires an argument.\n", c);
 					return 1;
 				}
 				break;
 			case 'n':
-				strncpy(vals[NVAL], optarg, 64);
-				flags[NFLAG]++;
-				if (flags[NFLAG] > 1) {
+				strncpy(timer.vals[NVAL], optarg, STR_MAX);
+				timer.flags[NFLAG]++;
+				if (timer.flags[NFLAG] > 1) {
 					printf("Only one argument -%c allowed.\n", c);
 					return 1;
 				}
-				if (vals[NVAL][0] == '-') {
+				if (timer.vals[NVAL][0] == '-') {
 					printf("Option -%c requires an argument.\n", c);
 					return 1;
 				}
 				break;
 			case 's':
-				strncpy(vals[SVAL], optarg, 64);
-				flags[SFLAG]++;
-				if (flags[SFLAG] > 1) {
+				strncpy(timer.vals[SVAL], optarg, STR_MAX);
+				timer.flags[SFLAG]++;
+				if (timer.flags[SFLAG] > 1) {
 					printf("Only one argument -%c allowed.\n", c);
 					return 1;
 				}
-				if (vals[SVAL][0] == '-') {
+				if (timer.vals[SVAL][0] == '-') {
 					printf("Option -%c requires an argument.\n", c);
 					return 1;
 				}
 				break;
 			case 't':
-				strncpy(vals[TVAL], optarg, 64);
-				flags[TFLAG]++;
-				if (flags[TFLAG] > 1) {
+				strncpy(timer.vals[TVAL], optarg, STR_MAX);
+				timer.flags[TFLAG]++;
+				if (timer.flags[TFLAG] > 1) {
 					printf("Only one argument -%c allowed.\n", c);
 					return 1;
 				}
-				if (vals[TVAL][0] == '-') {
+				if (timer.vals[TVAL][0] == '-') {
 					printf("Option -%c requires an argument.\n", c);
 					return 1;
 				}
@@ -129,31 +134,41 @@ int main(int argc, char *argv[]) {
 	}
 
 	// Make command lowercase, pass validated info to next step
-	for (int i = 0; command[i]; i++) command[i] = tolower(command[i]);
-	enter(flags, vals, command, name);
+	for (int i = 0; timer.command[i]; i++)
+		timer.command[i] = tolower(timer.command[i]);
+	enter(&timer);
+	printf("post enter\n");
 
 	return 0;
 }
 
 
-void getfile(FILE **fp, char *name, char *m) {
+void makearray(struct Timer *t, char a[NUMVAL + 1][STR_MAX]) {
+	strncpy(a[0], t->name, STR_MAX);
+	for (int i = 0; i < NUMVAL + 1; i++) {
+		strncpy(a[i + 1], t->vals[i], STR_MAX);
+	}
+}
+
+
+void getfile(FILE **fp, char *f, char *m) {
 	DIR *dp;
 	struct dirent *ep;
 	char filename[99] = "/home/sean/.config/ttrack/";
 	dp = opendir(filename);
 	if (dp != NULL) {
 		closedir(dp);
-		strncat(filename, name, 64);
+		strncat(filename, f, STR_MAX);
 		*fp = fopen(filename, m);
 	}
 	else {
 		mkdir(filename, 0755);
-		getfile(fp, name, m);
+		getfile(fp, f, m);
 	}
 }
 
 
-void putfile(FILE *f, char *data[64]) {
+void putfile(char data[NUMVAL + 1][STR_MAX], FILE *f) {
 	for (int i = 0; i <= NUMVAL; i++) {
 		printf("fputs(data[%d], f);", i);
 		fputs(data[i], f);
@@ -163,48 +178,50 @@ void putfile(FILE *f, char *data[64]) {
 }
 
 
-int enter(int *n, char v[NUMVAL][64], char *command, char *name) {
+int enter(struct Timer *t) {
 	// Debug/verification print
 	for (int i = 0; i < NUMFLAG; i++) {
-		printf("arg %d = %d %s\n", i, n[i], v[i]);
+		printf("arg %d = %d %s\n", i, t->name[i], t->vals[i]);
 	}
-	printf("name = %s\n", name);
-	printf("command = %s\n", command);
+	printf("name = %s\n", t->name);
+	printf("command = %s\n", t->command);
 
 	// Find the command and call the correct action with params
-	if (strncmp(command, "start", 5) == 0) {
-		printf("Start %s -a=%s -d=%s -n=%s -s=%s -t=%s\n",
-				name, v[AVAL], v[DVAL], v[NVAL], v[SVAL], v[TVAL]);
-		start(name, v);
+	if (strncmp(t->command, "start", 5) == 0) {
+		printf("start %s -a=%s -d=%s -n=%s -s=%s -t=%s\n",
+				t->name, t->vals[AVAL], t->vals[DVAL],
+				t->vals[NVAL], t->vals[SVAL], t->vals[TVAL]);
+		start(t);
 	}
-	else if (strncmp(command, "edit", 4) == 0) {
-		printf("Edit -a=%s -d=%s -n=%s -s=%s -t=%s\n",
-				v[AVAL], v[DVAL], v[NVAL], v[SVAL], v[TVAL]);
-		edit(v);
+	else if (strncmp(t->command, "edit", 4) == 0) {
+		printf("edit -a=%s -d=%s -n=%s -s=%s -t=%s\n",
+				t->vals[AVAL], t->vals[DVAL], t->vals[NVAL],
+				t->vals[SVAL], t->vals[TVAL]);
+		edit(t);
 	}
-	else if (strncmp(command, "list", 4) == 0) {
-		printf("List\n");
+	else if (strncmp(t->command, "list", 4) == 0) {
+		printf("list\n");
 		list();
 	}
-	else if (strncmp(command, "status", 6) == 0) {
-		printf("Status\n");
+	else if (strncmp(t->command, "status", 6) == 0) {
+		printf("status\n");
 		status();
 	}
-	else if (strncmp(command, "stop", 4) == 0) {
-		printf("Stop -a=%s -d=%s -n=%s -s=%s\n",
-				v[AVAL], v[DVAL], v[NVAL], v[SVAL]);
-		stop(v);
+	else if (strncmp(t->command, "stop", 4) == 0) {
+		printf("stop -a=%s -d=%s -n=%s -s=%s\n",
+				t->vals[AVAL], t->vals[DVAL], t->vals[NVAL], t->vals[SVAL]);
+		stop(t);
 	}
-	else if (strncmp(command, "report", 6) == 0) {
-		printf("Report\n");
+	else if (strncmp(t->command, "report", 6) == 0) {
+		printf("report\n");
 		report();
 	}
-	else if (strncmp(command, "delete", 6) == 0) {
-		printf("Delete %s\n", name);
-		delete(name);
+	else if (strncmp(t->command, "delete", 6) == 0) {
+		printf("delete %s\n", t->name);
+		delete(t);
 	}
-	else if (strncmp(command, "help", 4) == 0) {
-		printf("Help\n");
+	else if (strncmp(t->command, "help", 4) == 0) {
+		printf("help\n");
 		help();
 	}
 	else {
@@ -224,26 +241,26 @@ int list() {
 }
 
 
-int start(char *n, char v[NUMVAL][64]) {
+int start(struct Timer *t) {
 	FILE *test;
-	char d[NUMVAL + 1][64];
-
-	strncpy(d[0], n, 64);
-	for (int i = 0; i < NUMVAL; i++)
-		strncpy(d[i + 1], v[i], 64);
-
+	char d[NUMVAL + 1][STR_MAX];
+	printf("Pre makearray\n");
+	makearray(t, d);
+	printf("Post makearray\n");
 
 	getfile(&test, "testwriting.txt", "a");
+	printf("Post getfile\n");
 	//putfile(test, d);
 	fclose(test);
+	printf("post close\n");
 	return 0;
 }
 
 
-int edit(char v[NUMVAL][64]) {return 0;}
+int edit(struct Timer *t) {return 0;}
 int status() {return 0;}
-int stop(char v[NUMVAL][64]) {return 0;}
+int stop(struct Timer *t) {return 0;}
 int report() {return 0;}
-int delete(char *n) {return 0;}
+int delete(struct Timer *t) {return 0;}
 int help() {return 0;}
 
