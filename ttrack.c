@@ -8,10 +8,11 @@
 #include <sys/stat.h>
 
 #define STR_MAX 64
+#define DELIM ";"
 
 enum Flag {AFLAG, DFLAG, NFLAG, SFLAG, TFLAG, NUMFLAG};
 enum Val {AVAL, DVAL, NVAL, SVAL, TVAL, NUMVAL};
-enum Sav {NAME, TSTART, DSTART, NOTE, TAG, NUMSAV};
+enum Sav {NAME, TIME, NOTE, TAG, NUMSAV};
 
 struct Timer {
 	char command[STR_MAX];
@@ -23,6 +24,7 @@ struct Timer {
 
 
 void getfile(FILE **, char *, char *);
+void getsav(char [STR_MAX], struct Timer *);
 int enter(struct Timer *);
 int start(struct Timer *);
 int edit(struct Timer *);
@@ -174,10 +176,7 @@ int enter(struct Timer *t) {
 				t->vals[SVAL], t->vals[TVAL]);
 		edit(t);
 	}
-	else if (strncmp(t->command, "list", 4) == 0) {
-		printf("list\n");
-		list();
-	}
+	else if (strncmp(t->command, "list", 4) == 0) list();
 	else if (strncmp(t->command, "status", 6) == 0) {
 		printf("status\n");
 		status();
@@ -208,15 +207,50 @@ int enter(struct Timer *t) {
 }
 
 
-int list() {
-	char out[STR_MAX];
-	FILE *test;
-	getfile(&test, "testwriting.txt", "r");
-	fgets(out, STR_MAX, test);
-	fclose(test);
+void getsav(char s[STR_MAX], struct Timer *t) {
+	char *token;
+	char empty[] = "";
 
-	printf("%s", out);
-	
+	// Get current time
+	time_t record_time;
+	time_t current_time;
+	time(&current_time);
+
+	// Timer name
+	token = strtok(s, DELIM);
+	strncpy(t->sav[NAME], token, STR_MAX);
+
+	// Timer date difference to current time
+	token = strtok(NULL, DELIM);
+	sscanf(token, "%d", &record_time);
+	snprintf(t->sav[TIME], STR_MAX, "%d", current_time - record_time);
+
+	// Timer note
+	token = strtok(NULL, DELIM);
+	if (!token) token = (char *) empty;
+	strncpy(t->sav[NOTE], token, STR_MAX);
+
+	// Timer tag
+	token = strtok(NULL, DELIM);
+	if (!token) token = (char *) empty;
+	strncpy(t->sav[TAG], token, STR_MAX);
+}
+
+
+int list() {
+	FILE *timer_file;
+	char timer_text[STR_MAX];
+	struct Timer timer;
+
+	// Get string within timer file
+	getfile(&timer_file, "testwriting.txt", "r");
+	fgets(timer_text, STR_MAX, timer_file);
+	fclose(timer_file);
+
+	// Parse string into name and time value
+	getsav(timer_text, &timer);
+
+	printf("%s: %ss", timer.sav[NAME], timer.sav[TIME]);
 
 	return 0;
 }
@@ -225,16 +259,11 @@ int list() {
 int start(struct Timer *t) {
 	FILE *out;
 	time_t current_time;
-	struct tm *curr;
 	time(&current_time);
-	curr = localtime(&current_time);
 
 	// Populate the sav array of timer struct
 	strncpy(t->sav[NAME], t->name, STR_MAX);
-	sprintf(t->sav[TSTART], "%d:%d:%d",
-			curr->tm_hour, curr->tm_min, curr->tm_sec);
-	sprintf(t->sav[DSTART], "%d/%d/%d",
-			curr->tm_mon, curr->tm_mday, curr->tm_year);
+	snprintf(t->sav[TIME], STR_MAX, "%d", current_time);
 	strncpy(t->sav[NOTE], t->vals[NVAL], STR_MAX);
 	strncpy(t->sav[TAG], t->vals[TVAL], STR_MAX);
 
@@ -242,10 +271,10 @@ int start(struct Timer *t) {
 	getfile(&out, "testwriting.txt", "w");
 	for (int i = 0; i < NUMSAV - 1; i++) {
 		fputs(t->sav[i], out);
-		fputc(';', out);
+		fputs(DELIM, out);
 	}
 	fputs(t->sav[NUMSAV - 1], out);
-	fputc('\n', out);
+	//fputc('\0', out);
 	fclose(out);
 
 	return 0;
