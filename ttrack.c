@@ -1,11 +1,13 @@
 #include <ctype.h>
 #include <dirent.h>
+#include <pwd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #define STR_MAX 64
 #define DELIM ";"
@@ -151,7 +153,20 @@ int main(int argc, char *argv[]) {
 void getfile(FILE **fp, char *f, char *m) {
 	DIR *dp;
 	struct dirent *ep;
-	char filename[STR_MAX] = "/home/sean/.config/ttrack/";
+	char *config;
+	char filename[STR_MAX];
+
+	// Check for a home directory; otherwise, use script dir
+	if ((config = getenv("HOME")) == NULL) {
+		config = getpwuid(getuid())->pw_dir;
+		strncat(filename, config, STR_MAX);
+	}
+	else {
+		strncat(filename, config, STR_MAX);
+		strncat(filename, "/.config/ttrack/", STR_MAX);
+	}
+
+	// Check if .config folder exists; otherwise, make it
 	dp = opendir(filename);
 	if (dp != NULL) {
 		closedir(dp);
