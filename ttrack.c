@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
 void getfile(FILE **fp, char *f, char *m) {
 	DIR *dp;
 	struct dirent *ep;
-	char filename[99] = "/home/sean/.config/ttrack/";
+	char filename[STR_MAX] = "/home/sean/.config/ttrack/";
 	dp = opendir(filename);
 	if (dp != NULL) {
 		closedir(dp);
@@ -164,40 +164,14 @@ void getfile(FILE **fp, char *f, char *m) {
 
 int enter(struct Timer *t) {
 	// Find the command and call the correct action with params
-	if (strncmp(t->command, "start", 5) == 0) {
-		printf("start %s -a=%s -d=%s -n=%s -s=%s -t=%s\n",
-				t->name, t->vals[AVAL], t->vals[DVAL],
-				t->vals[NVAL], t->vals[SVAL], t->vals[TVAL]);
-		start(t);
-	}
-	else if (strncmp(t->command, "edit", 4) == 0) {
-		printf("edit -a=%s -d=%s -n=%s -s=%s -t=%s\n",
-				t->vals[AVAL], t->vals[DVAL], t->vals[NVAL],
-				t->vals[SVAL], t->vals[TVAL]);
-		edit(t);
-	}
-	else if (strncmp(t->command, "list", 4) == 0) list();
-	else if (strncmp(t->command, "status", 6) == 0) {
-		printf("status\n");
-		status();
-	}
-	else if (strncmp(t->command, "stop", 4) == 0) {
-		printf("stop -a=%s -d=%s -n=%s -s=%s\n",
-				t->vals[AVAL], t->vals[DVAL], t->vals[NVAL], t->vals[SVAL]);
-		stop(t);
-	}
-	else if (strncmp(t->command, "report", 6) == 0) {
-		printf("report\n");
-		report();
-	}
-	else if (strncmp(t->command, "delete", 6) == 0) {
-		printf("delete %s\n", t->name);
-		delete(t);
-	}
-	else if (strncmp(t->command, "help", 4) == 0) {
-		printf("help\n");
-		help();
-	}
+	if		(strncmp(t->command, "edit", 4)   == 0) edit(t);
+	else if (strncmp(t->command, "help", 4)   == 0) help();
+	else if (strncmp(t->command, "list", 4)   == 0) list();
+	else if (strncmp(t->command, "stop", 4)   == 0) stop(t);
+	else if	(strncmp(t->command, "start", 5)  == 0) start(t);
+	else if (strncmp(t->command, "delete", 6) == 0) delete(t);
+	else if (strncmp(t->command, "report", 6) == 0) report();
+	else if (strncmp(t->command, "status", 6) == 0) status();
 	else {
 		printf("Invalid command.\n");
 		return 1;
