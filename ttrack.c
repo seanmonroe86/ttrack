@@ -230,6 +230,12 @@ int list() {
 	char timer_text[STR_MAX];
 	struct Timer timer;
 
+	// Check timer file exists
+	if (access(CURRFILE, F_OK) == -1) {
+		printf("%s", "No timer");
+		exit(0);
+	}
+
 	// Get string within timer file
 	getfile(&timer_file, CURRFILE, "r");
 	fgets(timer_text, STR_MAX, timer_file);
@@ -237,13 +243,13 @@ int list() {
 
 	// If string is empty, there is no timer, exit
 	if (timer_text[0] < '0') {
-		printf("No timer");
+		printf("%s", "No timer");
 		exit(0);
 	}
 
 	// Parse string into name and time value
 	getsav(timer_text, &timer);
-	printf("%s: %ds", timer.sav[NAME], timer.time);
+	printf("%s: %d%s", timer.sav[NAME], timer.time, "s");
 
 	return 0;
 }
@@ -279,6 +285,12 @@ int stop(struct Timer *t) {
 	char timer_text[STR_MAX];
 	char time_string[STR_MAX];
 
+	// Check timer file exists
+	if (access(CURRFILE, F_OK) == -1) {
+		printf("%s\n", "No timer to stop.");
+		exit(0);
+	}
+
 	// Get entry data
 	getfile(&in, CURRFILE, "r");
 	fgets(timer_text, STR_MAX, in);
@@ -286,7 +298,7 @@ int stop(struct Timer *t) {
 
 	// If string is empty, there is no timer, exit
 	if (timer_text[0] < '0') {
-		printf("No timer to stop.\n");
+		printf("%s\n", "No timer to stop.");
 		exit(0);
 	}
 
