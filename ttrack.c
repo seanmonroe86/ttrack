@@ -25,6 +25,7 @@ struct Timer {
 	char name[STR_MAX];
 	char sav[NUMSAV][STR_MAX];
 	time_t time;
+	time_t timediff;
 };
 
 
@@ -54,7 +55,7 @@ int main(int argc, char *argv[]) {
 		strncpy(timer.command, "list", 5);
 		optind = 1;
 	}
-	else if ((argc == 3) && (argv[2][0] != '-')) {
+	else if ((argc >= 3) && (argv[2][0] != '-')) {
 		strncpy(timer.command, argv[1], STR_MAX);
 		strncpy(timer.name, argv[2], STR_MAX);
 		optind = 3;
@@ -150,6 +151,25 @@ int main(int argc, char *argv[]) {
 }
 
 
+int enter(struct Timer *t) {
+	// Find the command and call the correct action with params
+	if		(strncmp(t->command, "edit", 4)   == 0) edit(t);
+	else if (strncmp(t->command, "help", 4)   == 0) help();
+	else if (strncmp(t->command, "list", 4)   == 0) list();
+	else if (strncmp(t->command, "stop", 4)   == 0) stop(t);
+	else if	(strncmp(t->command, "start", 5)  == 0) start(t);
+	else if (strncmp(t->command, "delete", 6) == 0) delete(t);
+	else if (strncmp(t->command, "report", 6) == 0) report();
+	else if (strncmp(t->command, "status", 6) == 0) status();
+	else {
+		printf("Invalid command.\n");
+		return 1;
+	}
+
+	return 0;
+}
+
+
 void getfile(FILE **fp, char *f, char *m, char **fn) {
 	DIR *dp;
 	struct dirent *ep;
@@ -182,34 +202,14 @@ void getfile(FILE **fp, char *f, char *m, char **fn) {
 }
 
 
-int enter(struct Timer *t) {
-	// Find the command and call the correct action with params
-	if		(strncmp(t->command, "edit", 4)   == 0) edit(t);
-	else if (strncmp(t->command, "help", 4)   == 0) help();
-	else if (strncmp(t->command, "list", 4)   == 0) list();
-	else if (strncmp(t->command, "stop", 4)   == 0) stop(t);
-	else if	(strncmp(t->command, "start", 5)  == 0) start(t);
-	else if (strncmp(t->command, "delete", 6) == 0) delete(t);
-	else if (strncmp(t->command, "report", 6) == 0) report();
-	else if (strncmp(t->command, "status", 6) == 0) status();
-	else {
-		printf("Invalid command.\n");
-		return 1;
-	}
-
-	return 0;
-}
-
-
 void getsav(char s[STR_MAX], struct Timer *t) {
 	char *token;
 	char empty[] = "";
-	time_t record_time;
 
 	// Timer date difference to current time
 	token = strtok(s, DELIM);
-	sscanf(token, "%d", &record_time);
-	t->time = time(NULL) - record_time;
+	sscanf(token, "%d", &(t->time));
+	t->timediff = time(NULL) - t->time;
 
 	// Timer name
 	token = strtok(NULL, DELIM);
@@ -255,7 +255,7 @@ int list() {
 
 	// Parse string into name and time value
 	getsav(timer_text, &timer);
-	printf("%s: %d%s", timer.sav[NAME], timer.time, "s");
+	printf("%s: %d%s", timer.sav[NAME], timer.timediff, "s");
 
 	return 0;
 }
@@ -299,7 +299,6 @@ int stop(struct Timer *t) {
 	// Check timer file exists
 	getfile(&in, CURRFILE, "r", &filename);
 	test = access(filename, F_OK);
-	free(filename);
 	if (test == -1) {
 		printf("%s\n", "No timer to stop.");
 		exit(0);
@@ -316,18 +315,17 @@ int stop(struct Timer *t) {
 	}
 
 	// Delete start entry
-	getfile(&in, CURRFILE, "w", &filename);
-	fputc('\0', in);
-	fclose(in);
+	getfile(&out, CURRFILE, "w", &filename);
+	fputc('\0', out);
+	fclose(out);
 
 	// Parse data
 	getsav(timer_text, t);
-	sprintf(time_string, "%d", t->time);
 
 	// Save data to file
 	getfile(&out, SAVEFILE, "a", &filename);
-	fputs(time_string, out);
-	fputs(DELIM, out);
+	free(filename);
+	fprintf(out, "%d%s", t->timediff, DELIM);
 	for (int i = 0; i < NUMSAV - 1; i++) {
 		fputs(t->sav[i], out);
 		fputs(DELIM, out);
@@ -349,8 +347,6 @@ int edit(struct Timer *e) {
 	char *filename = malloc(sizeof(char) * STR_MAX);
 	int test;
 
-	printf("%s\n", "Beginning edit...");
-
 	// Check timer file exists
 	getfile(&in, CURRFILE, "r", &filename);
 	test = access(filename, F_OK);
@@ -359,13 +355,9 @@ int edit(struct Timer *e) {
 		exit(0);
 	}
 
-	printf("%s\n", "File existence verified...");
-
 	// Get entry data
 	fgets(timer_text, STR_MAX, in);
 	fclose(in);
-
-	printf("%s\n", "Timer data loaded from file...");
 
 	// If string is empty, there is no timer, exit
 	if (timer_text[0] < '0') {
@@ -373,51 +365,32 @@ int edit(struct Timer *e) {
 		exit(0);
 	}
 
-	printf("%s\n", "Timer data verified...");
-
 	// Delete start entry
 	getfile(&in, CURRFILE, "w", &filename);
 	fputc('\0', in);
 	fclose(in);
 
-	printf("%s\n", "Timer data reset...");
-
 	// Parse data
 	getsav(timer_text, t);
-	sprintf(time_string, "%d", t->time);
-
-	printf("%s\n", "Timer data parsed...");
-
-	// Populate the sav array of timer struct
-	strncpy(t->sav[NAME], t->name, STR_MAX);
-	strncpy(t->sav[NOTE], t->vals[NVAL], STR_MAX);
-	strncpy(t->sav[TAG], t->vals[TVAL], STR_MAX);
-	sprintf(time_string, "%d", time(NULL));
-
-	printf("%s\n", "Timer sav array populated...");
 
 	// Overwrite the timer struct with edit overrides
-	if (strncmp(e->name, "", STR_MAX) != 0)
+	if ((strncmp(e->name, "", STR_MAX) != 0) &&
+		(strncmp(e->name, "Timer", STR_MAX) != 0))
 		strncpy(t->sav[NAME], e->name, STR_MAX);
 	if (strncmp(e->vals[NVAL], "", STR_MAX) != 0)
 		strncpy(t->sav[NOTE], e->vals[NVAL], STR_MAX);
 	if (strncmp(e->vals[TVAL], "", STR_MAX) != 0)
 		strncpy(t->sav[TAG], e->vals[TVAL], STR_MAX);
 
-	printf("%s\n", "Timer data sav array edited...");
-
 	// Save data to file
 	getfile(&out, CURRFILE, "w", &filename);
-	fputs(time_string, out);
-	fputs(DELIM, out);
+	fprintf(out, "%d%s", t->time, DELIM);
 	for (int i = 0; i < NUMSAV - 1; i++) {
 		fputs(t->sav[i], out);
 		fputs(DELIM, out);
 	}
 	fputs(t->sav[NUMSAV - 1], out);
 	fclose(out);
-
-	printf("%s\n", "Timer data written...");
 
 	return 0;
 }
