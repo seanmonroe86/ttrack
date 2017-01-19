@@ -155,6 +155,9 @@ void getfile(FILE **fp, char *f, char *m, char **fn) {
 	struct dirent *ep;
 	char *config;
 
+	// Wipe filename string
+	strncpy(*fn, "", STR_MAX);
+
 	// Check for a home directory; otherwise, use script dir
 	if ((config = getenv("HOME")) == NULL) {
 		config = getpwuid(getuid())->pw_dir;
@@ -236,7 +239,6 @@ int list() {
 	test = access(filename, F_OK);
 	free(filename);
 	if (test == -1) {
-		fclose(timer_file);
 		printf("%s", "No timer");
 		exit(0);
 	}
@@ -299,7 +301,6 @@ int stop(struct Timer *t) {
 	test = access(filename, F_OK);
 	free(filename);
 	if (test == -1) {
-		fclose(in);
 		printf("%s\n", "No timer to stop.");
 		exit(0);
 	}
@@ -348,18 +349,23 @@ int edit(struct Timer *e) {
 	char *filename = malloc(sizeof(char) * STR_MAX);
 	int test;
 
+	printf("%s\n", "Beginning edit...");
+
 	// Check timer file exists
 	getfile(&in, CURRFILE, "r", &filename);
 	test = access(filename, F_OK);
 	if (test == -1) {
-		fclose(in);
 		printf("%s\n", "No timer to edit.");
 		exit(0);
 	}
 
+	printf("%s\n", "File existence verified...");
+
 	// Get entry data
 	fgets(timer_text, STR_MAX, in);
 	fclose(in);
+
+	printf("%s\n", "Timer data loaded from file...");
 
 	// If string is empty, there is no timer, exit
 	if (timer_text[0] < '0') {
@@ -367,20 +373,28 @@ int edit(struct Timer *e) {
 		exit(0);
 	}
 
+	printf("%s\n", "Timer data verified...");
+
 	// Delete start entry
 	getfile(&in, CURRFILE, "w", &filename);
 	fputc('\0', in);
 	fclose(in);
 
+	printf("%s\n", "Timer data reset...");
+
 	// Parse data
 	getsav(timer_text, t);
 	sprintf(time_string, "%d", t->time);
+
+	printf("%s\n", "Timer data parsed...");
 
 	// Populate the sav array of timer struct
 	strncpy(t->sav[NAME], t->name, STR_MAX);
 	strncpy(t->sav[NOTE], t->vals[NVAL], STR_MAX);
 	strncpy(t->sav[TAG], t->vals[TVAL], STR_MAX);
 	sprintf(time_string, "%d", time(NULL));
+
+	printf("%s\n", "Timer sav array populated...");
 
 	// Overwrite the timer struct with edit overrides
 	if (strncmp(e->name, "", STR_MAX) != 0)
@@ -390,6 +404,7 @@ int edit(struct Timer *e) {
 	if (strncmp(e->vals[TVAL], "", STR_MAX) != 0)
 		strncpy(t->sav[TAG], e->vals[TVAL], STR_MAX);
 
+	printf("%s\n", "Timer data sav array edited...");
 
 	// Save data to file
 	getfile(&out, CURRFILE, "w", &filename);
@@ -401,6 +416,8 @@ int edit(struct Timer *e) {
 	}
 	fputs(t->sav[NUMSAV - 1], out);
 	fclose(out);
+
+	printf("%s\n", "Timer data written...");
 
 	return 0;
 }
