@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include "ttrack.h"
 
 #define STR_MAX 64
 #define DELIM ";"
@@ -31,7 +32,7 @@ struct Timer {
 
 void getfile(FILE **, char *, char *, char **);
 void getsav(char [STR_MAX], struct Timer *);
-int enter(struct Timer *);
+int enter(struct Timer *, char *);
 int start(struct Timer *);
 int edit(struct Timer *);
 int list();
@@ -39,7 +40,7 @@ int status();
 int stop(struct Timer *);
 int report();
 int delete(struct Timer *);
-int help();
+int help(char *);
 
 
 int main(int argc, char *argv[]) {
@@ -145,16 +146,16 @@ int main(int argc, char *argv[]) {
 	// Make command lowercase, pass validated info to next step
 	for (int i = 0; timer.command[i]; i++)
 		timer.command[i] = tolower(timer.command[i]);
-	enter(&timer);
+	enter(&timer, argv[0]);
 
 	return 0;
 }
 
 
-int enter(struct Timer *t) {
+int enter(struct Timer *t, char *com) {
 	// Find the command and call the correct action with params
 	if		(strncmp(t->command, "edit", 4)   == 0) edit(t);
-	else if (strncmp(t->command, "help", 4)   == 0) help();
+	else if (strncmp(t->command, "help", 4)   == 0) help(com);
 	else if (strncmp(t->command, "list", 4)   == 0) list();
 	else if (strncmp(t->command, "stop", 4)   == 0) stop(t);
 	else if	(strncmp(t->command, "start", 5)  == 0) start(t);
@@ -389,7 +390,14 @@ int edit(struct Timer *e) {
 }
 
 
+int help(char *fp) {
+	FILE *f;
+	printf("%s\n", README);
+	
+	return 0;
+}
+
+
 int status() {return 0;}
 int report() {return 0;}
 int delete(struct Timer *t) {return 0;}
-int help() {return 0;}
