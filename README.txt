@@ -10,10 +10,10 @@ COMMAND
 start	NAME	begin new timer with NAME; default Timer
 edit			modify currently running timers with new name and/or flag info
 list			print timer "NAME: RUNTIME" or "No timer" otherwise, without newline
-status			show details of current timer ***
+status			show details of current timer
 stop			stop current timer and make record
 
-report			prints full details of stopped timers in history ***
+report			prints full details of stopped timers in history
 delete			delete all info of timer with NAME ***
 help			prints something like this doc ***
 
