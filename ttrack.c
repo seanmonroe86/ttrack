@@ -1,34 +1,4 @@
-#include <ctype.h>
-#include <dirent.h>
-#include <pwd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include "ttrack.h"
-
-#define STR_MAX 64
-#define DELIM ";"
-#define CURRFILE "current"
-#define SAVEFILE "record"
-
-enum Flag {AFLAG, DFLAG, NFLAG, SFLAG, TFLAG, NUMFLAG};
-enum Val {AVAL, DVAL, NVAL, SVAL, TVAL, NUMVAL};
-enum Sav {NAME, NOTE, TAG, NUMSAV};
-
-struct Timer {
-	char command[STR_MAX];
-	int flags[NUMFLAG];
-	char vals[NUMVAL][STR_MAX];
-	char name[STR_MAX];
-	char sav[NUMSAV][STR_MAX];
-	time_t time;
-	time_t timediff;
-};
-
 
 void getfile(FILE **, char *, char *, char **);
 void getsav(char [STR_MAX], struct Timer *);
@@ -40,13 +10,12 @@ int status();
 int stop(struct Timer *);
 int report();
 int delete(struct Timer *);
-int help(char *);
-
+int help();
 
 int main(int argc, char *argv[]) {
 	char c;
 	struct Timer timer;
-	strncpy(timer.name, "Timer", STR_MAX);
+	strncpy(timer.sav[NAME], "Timer", STR_MAX);
 
 	opterr = 0;
 	for (int i = 0; i < NUMFLAG; i++) timer.flags[i] = 0;
@@ -58,7 +27,7 @@ int main(int argc, char *argv[]) {
 	}
 	else if ((argc >= 3) && (argv[2][0] != '-')) {
 		strncpy(timer.command, argv[1], STR_MAX);
-		strncpy(timer.name, argv[2], STR_MAX);
+		strncpy(timer.sav[NAME], argv[2], STR_MAX);
 		optind = 3;
 	}
 	else {
@@ -155,7 +124,7 @@ int main(int argc, char *argv[]) {
 int enter(struct Timer *t, char *com) {
 	// Find the command and call the correct action with params
 	if		(strncmp(t->command, "edit", 4)   == 0) edit(t);
-	else if (strncmp(t->command, "help", 4)   == 0) help(com);
+	else if (strncmp(t->command, "help", 4)   == 0) help();
 	else if (strncmp(t->command, "list", 4)   == 0) list();
 	else if (strncmp(t->command, "stop", 4)   == 0) stop(t);
 	else if	(strncmp(t->command, "start", 5)  == 0) start(t);
@@ -207,9 +176,11 @@ void getsav(char s[STR_MAX], struct Timer *t) {
 	char *token;
 	char empty[] = "";
 
-	// Timer date difference to current time
+	// Timer start time
 	token = strtok(s, DELIM);
 	sscanf(token, "%d", &(t->time));
+	
+	// Timer start difference to current time
 	t->timediff = time(NULL) - t->time;
 
 	// Timer name
@@ -267,14 +238,14 @@ int start(struct Timer *t) {
 	char *filename = malloc(sizeof(char) * STR_MAX);
 
 	// Populate the sav array of timer struct
-	strncpy(t->sav[NAME], t->name,		 STR_MAX);
+	strncpy(t->sav[NAME], t->sav[NAME],	 STR_MAX);
 	strncpy(t->sav[NOTE], t->vals[NVAL], STR_MAX);
 	strncpy(t->sav[TAG],  t->vals[TVAL], STR_MAX);
 
 	// Save data to file
 	getfile(&f, CURRFILE, "w", &filename);
 	fprintf(f, "%d%s", time(NULL),	  DELIM);
-	fprintf(f, "%s%s", t->name,		  DELIM);
+	fprintf(f, "%s%s", t->sav[NAME],  DELIM);
 	fprintf(f, "%s%s", t->vals[NVAL], DELIM);
 	fprintf(f, "%s",   t->vals[TVAL]);
 
@@ -368,9 +339,9 @@ int edit(struct Timer *e) {
 	getsav(timer_text, t);
 
 	// Overwrite the timer struct with edit overrides, if present
-	if ((strncmp(e->name, "", STR_MAX) != 0) &&
-		(strncmp(e->name, "Timer", STR_MAX) != 0))
-		strncpy(t->sav[NAME], e->name, STR_MAX);
+	if ((strncmp(e->sav[NAME], "", STR_MAX) != 0) &&
+		(strncmp(e->sav[NAME], "Timer", STR_MAX) != 0))
+		strncpy(t->sav[NAME], e->sav[NAME], STR_MAX);
 
 	if (strncmp(e->vals[NVAL], "", STR_MAX) != 0)
 		strncpy(t->sav[NOTE], e->vals[NVAL], STR_MAX);
@@ -386,18 +357,93 @@ int edit(struct Timer *e) {
 	fprintf(f, "%s",   t->sav[TAG]);
 	fclose(f);
 
+	// Free pointers
+	free(filename);
+
 	return 0;
 }
 
 
-int help(char *fp) {
-	FILE *f;
+int help() {
 	printf("%s\n", README);
+	return 0;
+}
+
+
+int status() {
+	int test;
+	FILE *f;
+	struct Timer timer;
+	struct Timer *t = &timer;
+	char timer_text[STR_MAX];
+	char *filename = malloc(sizeof(char) * STR_MAX);
+
+	// Check timer file exists
+	getfile(&f, CURRFILE, "r", &filename);
+	test = access(filename, F_OK);
+	if (test == -1) {
+		printf("%s\n", "No timer.");
+		exit(0);
+	}
+
+	// Get entry data
+	fgets(timer_text, STR_MAX, f);
+	fclose(f);
+
+	// If string is empty, there is no timer, exit
+	if (timer_text[0] < '0') {
+		printf("%s\n", "No timer.");
+		exit(0);
+	}
+
+	// Parse data
+	getsav(timer_text, t);
+
+	// Print data
+	for (int i = 0; i < NUMSAV; i++) {
+		printf("%s: %s\n", SAV[i], t->sav[i]);
+	}
+	printf("%s: %s\n", "Started", ctime(&(t->time)));
+
+	// Free pointers
+	free(filename);
 	
 	return 0;
 }
 
 
-int status() {return 0;}
-int report() {return 0;}
+int report() {
+	int test;
+	FILE *f;
+	struct Timer timer;
+	struct Timer *t = &timer;
+	char timer_text[STR_MAX];
+	char *filename = malloc(sizeof(char) * STR_MAX);
+
+	// Check timer file exists
+	getfile(&f, SAVEFILE, "r", &filename);
+	test = access(filename, F_OK);
+	if (test == -1) {
+		printf("%s\n", "No records.");
+		exit(0);
+	}
+
+	// Read contents of record until EOF
+	while ((fgets(timer_text, STR_MAX, f)) != NULL) {
+		getsav(timer_text, t);
+
+		// Print data
+		for (int i = 0; i < NUMSAV; i++) {
+			printf("%s: %s\n", SAV[i], t->sav[i]);
+		}
+		printf("%s: %s\n", "Started", ctime(&(t->time)));
+	}
+
+	// Free pointers
+	free(filename);
+
+	return 0;
+}
+
+
 int delete(struct Timer *t) {return 0;}
