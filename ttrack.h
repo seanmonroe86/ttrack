@@ -1,3 +1,33 @@
+#include <ctype.h>
+#include <dirent.h>
+#include <pwd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+#define STR_MAX 64
+#define DELIM ";"
+#define CURRFILE "current"
+#define SAVEFILE "record"
+
+enum Flag {AFLAG, DFLAG, NFLAG, SFLAG, TFLAG, NUMFLAG};
+enum Val {AVAL, DVAL, NVAL, SVAL, TVAL, NUMVAL};
+enum Sav {NAME, NOTE, TAG, NUMSAV};
+const char SAV[NUMSAV][STR_MAX] = {"Name", "Note", "Tag"};
+
+struct Timer {
+	char command[STR_MAX];
+	int flags[NUMFLAG];
+	char vals[NUMVAL][STR_MAX];
+	char sav[NUMSAV][STR_MAX];
+	time_t time;
+	time_t timediff;
+};
+
 const char README[] =
 "ttrack COMMAND [ARGS]\n\
 A simple-looking stopwatch. Starts a new timer, edits the current timer, and\n\
@@ -11,7 +41,7 @@ COMMAND\n\
 start	NAME	begin new timer with NAME; default Timer\n\
 edit			modify currently running timers with new name and/or flag info\n\
 list			print timer \"NAME: RUNTIME\" or \"No timer\" otherwise, without newline\n\
-status			show details of current timer ***\n\
+status			show details of current timer\n\
 stop			stop current timer and make record\n\
 \n\
 report			prints full details of stopped timers in history ***\n\
